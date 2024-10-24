@@ -52,7 +52,23 @@ const getAllShop = async (req, res) => {
   // /products?name = apapun => req.query.name
   try {
     // cara 1 = kita jaga request querynya biar ga kemana2
-    const { shopName, adminEmail, productName, stock } = req.query;
+    const { shopName, productName, stock, page = 1 } = req.query;
+
+    const intPage = parseInt(page);
+    if (intPage <= 0) {
+      return res.status(400).json({
+        status: "Failed",
+        message: "Bad request",
+        isSuccess: false,
+        data: null,
+      });
+    }
+
+    // limit adalah parameter untuk batas data yang akan ditampilkan
+    const limit = 10;
+
+    // offset adalah parameter untuk pembatas data, misal offset = 0, maka data yang ditampilkan dari 1 sampai limit
+    const offset = (intPage - 1) * limit;
 
     const condition = {};
     if (shopName) condition.name = { [Op.iLike]: `%${shopName}%` };
@@ -77,14 +93,22 @@ const getAllShop = async (req, res) => {
       ],
       attributes: ["name", "adminEmail"],
       where: condition,
+      limit,
+      offset,
     });
 
+    // total shop pada database
+    const totalShop = await Shops.count();
+
+    // total data yang di dapat
     const totalData = shops.length;
 
     res.status(200).json({
       status: "Success",
       message: "Success get shops data",
       isSuccess: true,
+      totalPages: Math.ceil(totalShop / limit),
+      page: intPage,
       data: {
         totalData,
         shops,
